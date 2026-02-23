@@ -10,7 +10,7 @@ info:
     request body returns a conflict error.
 
 servers:
-  - url: http://localhost:8080
+  - url: http://localhost:5033
     description: Local (Docker/K8s)
 
 tags:
