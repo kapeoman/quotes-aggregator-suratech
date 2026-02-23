@@ -1,0 +1,96 @@
+trigger:
+- main
+
+variables:
+  buildConfiguration: 'Release'
+  dotnetVersion: '8.x'
+
+stages:
+
+# BUILD & UNIT TEST
+- stage: Build
+  displayName: 'Build & Unit Tests'
+  jobs:
+  - job: BuildJob
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '$(dotnetVersion)'
+
+    - script: dotnet restore
+      displayName: 'Restore'
+
+    - script: dotnet build --configuration $(buildConfiguration) --no-restore
+      displayName: 'Build'
+
+    - script: dotnet test --configuration $(buildConfiguration) --no-build --collect:"XPlat Code Coverage"
+      displayName: 'Run Unit Tests'
+
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFormat: 'VSTest'
+        testResultsFiles: '**/*.trx'
+        failTaskOnFailedTests: true
+
+    - task: PublishCodeCoverageResults@1
+      inputs:
+        codeCoverageTool: 'Cobertura'
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.cobertura.xml'
+
+
+# DOCKER BUILD
+- stage: Container
+  displayName: 'Build Docker Image'
+  dependsOn: Build
+  jobs:
+  - job: DockerJob
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+
+    - script: docker build -t quotes-api:latest .
+      displayName: 'Build Docker Image'
+
+
+
+# INTEGRATION TESTS
+- stage: Integration
+  displayName: 'Integration Tests'
+  dependsOn: Container
+  jobs:
+  - job: IntegrationJob
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '$(dotnetVersion)'
+
+    - script: docker compose up -d --build
+      displayName: 'Start docker-compose stack'
+
+    - script: |
+        echo "Waiting for API health..."
+        for i in {1..30}; do
+          if curl -fsS http://localhost:5033/health > /dev/null; then
+            echo "API is healthy"
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "API did not become healthy in time"
+        exit 1
+      displayName: 'Wait for /health'
+
+    - script: dotnet test --configuration $(buildConfiguration) --filter "FullyQualifiedName~Integration"
+      displayName: 'Run Integration Tests'
+
+    - script: docker compose down -v
+      displayName: 'Stop docker-compose'
+      condition: always()

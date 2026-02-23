@@ -1,0 +1,238 @@
+openapi: 3.0.3
+info:
+  title: Quotes Aggregator API
+  version: 1.0.0
+  description: >
+    Quotes Aggregator API issues quotes with persistent idempotency.
+    Clients MUST send an Idempotency-Key header for POST /api/v1/quotes.
+    Replaying the same request body with the same Idempotency-Key returns the
+    original stored response. Reusing the same Idempotency-Key with a different
+    request body returns a conflict error.
+
+servers:
+  - url: http://localhost:8080
+    description: Local (Docker/K8s)
+
+tags:
+  - name: Quotes
+    description: Quote issuance endpoints
+
+paths:
+  /api/v1/quotes:
+    post:
+      tags: [Quotes]
+      summary: Issue a quote (idempotent)
+      description: >
+        Issues a quote. This operation is idempotent when the client provides
+        a stable Idempotency-Key per logical request.
+        If the same Idempotency-Key is used again with the exact same request body,
+        the API returns the stored response (no duplicate quote is created).
+        If the same Idempotency-Key is reused with a different request body,
+        the API returns 409 Conflict.
+      operationId: createQuote
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: >
+            A client-generated unique key to enforce idempotency for this request.
+            Recommended: UUID v4.
+            Reuse the same key only when retrying the same logical request.
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 128
+          example: "7f3c1b4b-8a8f-4b73-b7c1-3b2b0a2f4a7e"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteCreateRequest"
+            examples:
+              example1:
+                value:
+                  documentId: "DOC-123456"
+                  amount: 19990.50
+                  currency: "CLP"
+      responses:
+        "201":
+          description: Quote issued successfully (created or replayed)
+          headers:
+            Idempotency-Status:
+              description: Indicates whether the response was created or replayed from storage.
+              schema:
+                type: string
+                enum: [created, replayed]
+              example: created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuoteResponse"
+              examples:
+                ok:
+                  value:
+                    id: "a3b2c1d0-1111-2222-3333-444455556666"
+                    documentId: "DOC-123456"
+                    amount: 19990.50
+                    currency: "CLP"
+                    status: "ISSUED"
+                    createdAt: "2026-02-21T12:34:56Z"
+        "400":
+          description: Bad Request (validation error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missingHeader:
+                  value:
+                    code: "BAD_REQUEST"
+                    message: "Idempotency-Key header is required."
+                invalidBody:
+                  value:
+                    code: "VALIDATION_ERROR"
+                    message: "One or more fields are invalid."
+                    details:
+                      - field: "amount"
+                        issue: "must be greater than 0"
+        "401":
+          description: Unauthorized (missing/invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                unauthorized:
+                  value:
+                    code: "UNAUTHORIZED"
+                    message: "Authentication required."
+        "403":
+          description: Forbidden (insufficient permissions)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                forbidden:
+                  value:
+                    code: "FORBIDDEN"
+                    message: "You do not have permission to access this resource."
+        "409":
+          description: Conflict (idempotency key reused with different request body)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                idempotencyConflict:
+                  value:
+                    code: "IDEMPOTENCY_CONFLICT"
+                    message: "Idempotency-Key was already used with a different request payload."
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                serverError:
+                  value:
+                    code: "INTERNAL_ERROR"
+                    message: "An unexpected error occurred."
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Send an Authorization header with a Bearer JWT:
+        Authorization: Bearer <token>
+
+  schemas:
+    QuoteCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [documentId, amount, currency]
+      properties:
+        documentId:
+          type: string
+          description: External document identifier for the quote.
+          minLength: 1
+          maxLength: 64
+          pattern: "^[A-Za-z0-9._:-]+$"
+          example: "DOC-123456"
+        amount:
+          type: number
+          format: double
+          description: Quote amount. Must be greater than 0.
+          exclusiveMinimum: true
+          example: 19990.50
+        currency:
+          type: string
+          description: ISO 4217 currency code.
+          minLength: 3
+          maxLength: 3
+          pattern: "^[A-Z]{3}$"
+          example: "CLP"
+
+    QuoteResponse:
+      type: object
+      additionalProperties: false
+      required: [id, documentId, amount, currency, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "a3b2c1d0-1111-2222-3333-444455556666"
+        documentId:
+          type: string
+          example: "DOC-123456"
+        amount:
+          type: number
+          format: double
+          example: 19990.50
+        currency:
+          type: string
+          example: "CLP"
+        status:
+          type: string
+          description: Quote status.
+          enum: [ISSUED]
+          example: "ISSUED"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-02-21T12:34:56Z"
+
+    ErrorDetail:
+      type: object
+      additionalProperties: false
+      required: [field, issue]
+      properties:
+        field:
+          type: string
+          example: "amount"
+        issue:
+          type: string
+          example: "must be greater than 0"
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "One or more fields are invalid."
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetail"

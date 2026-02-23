@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:quotes-aggregator:events:QuoteIssued:1.0",
+  "title": "QuoteIssued",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specVersion", "eventType", "eventVersion", "eventId", "occurredAt", "producer", "data"],
+  "properties": {
+    "specVersion": {
+      "type": "string",
+      "description": "Envelope specification version for this event contract.",
+      "const": "1.0"
+    },
+    "eventType": {
+      "type": "string",
+      "description": "Business event name.",
+      "const": "QuoteIssued"
+    },
+    "eventVersion": {
+      "type": "string",
+      "description": "Event contract version.",
+      "const": "1.0"
+    },
+    "eventId": {
+      "type": "string",
+      "description": "Unique identifier for this event instance (UUID).",
+      "format": "uuid"
+    },
+    "occurredAt": {
+      "type": "string",
+      "description": "UTC timestamp when the event occurred.",
+      "format": "date-time"
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["service", "environment"],
+      "properties": {
+        "service": { "type": "string", "description": "Producer service name." },
+        "environment": { "type": "string", "description": "Environment name (dev/test/prod)." }
+      }
+    },
+    "trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["correlationId"],
+      "properties": {
+        "correlationId": { "type": "string", "description": "Correlation identifier for cross-service tracing." },
+        "requestId": { "type": "string", "description": "Optional request identifier." }
+      }
+    },
+    "idempotency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "requestHash"],
+      "properties": {
+        "key": { "type": "string", "description": "Idempotency-Key used at the API level (if provided)." },
+        "requestHash": { "type": "string", "description": "SHA-256 hash of the normalized request payload (hex)." }
+      }
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["quoteId", "documentId", "amount", "currency", "status", "createdAt"],
+      "properties": {
+        "quoteId": { "type": "string", "format": "uuid", "description": "Quote identifier." },
+        "documentId": { "type": "string", "minLength": 1, "maxLength": 64, "description": "Business document identifier." },
+        "amount": { "type": "number", "description": "Quote amount.", "minimum": 0 },
+        "currency": { "type": "string", "description": "ISO-like currency code (e.g., CLP, USD).", "minLength": 3, "maxLength": 3 },
+        "status": { "type": "string", "description": "Quote status.", "enum": ["ISSUED"] },
+        "createdAt": { "type": "string", "format": "date-time", "description": "UTC timestamp when the quote was created." }
+      }
+    }
+  }
+}

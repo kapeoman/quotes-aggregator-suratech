@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: quotes-postgres
+    environment:
+      POSTGRES_DB: quotesdb
+      POSTGRES_USER: quotesuser
+      POSTGRES_PASSWORD: quotespass
+    ports:
+      - "55432:5432"
+    volumes:
+      - quotes_pgdata:/var/lib/postgresql/data
+
+  quotes-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: quotes-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=quotesdb;Username=quotesuser;Password=quotespass
+      Jwt__Issuer: QuotesAggregator
+      Jwt__Audience: QuotesAggregatorClients
+      Jwt__Key: JpWX4hRQ9EP8XGE25LJx3pQtqMHYTUw2V2eERuD8Hy9ZAWHJUREh7wYJUs1AVYot+QdxnpkFGYXi4WPMWOmcCg==JpWX4hRQ9EP8XGE25LJx3pQtqMHYTUw2V2eERuD8Hy9ZAWHJUREh7wYJUs1AVYot+QdxnpkFGYXi4WPMWOmcCg==
+    ports:
+      - "5033:8080"
+    depends_on:
+      - postgres
+
+volumes:
+  quotes_pgdata:

@@ -1,0 +1,33 @@
+[
+  {
+    "ContainingType": "Quotes.Api.Controllers.AuthController",
+    "Method": "Token",
+    "RelativePath": "api/v1/Auth/token",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Quotes.Api.Controllers.QuotesController",
+    "Method": "CreateQuote",
+    "RelativePath": "api/v1/quotes",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Idempotency-Key",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "request",
+        "Type": "Quotes.Api.Contracts.CreateQuoteRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  }
+]

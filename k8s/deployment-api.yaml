@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotes-api
+  labels:
+    app: quotes-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quotes-api
+  template:
+    metadata:
+      labels:
+        app: quotes-api
+    spec:
+      containers:
+        - name: quotes-api
+          image: quotes-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 5033
+          env:
+            - name: ASPNETCORE_URLS
+              value: http://0.0.0.0:5033
+            - name: ConnectionStrings__DefaultConnection
+              value: Host=quotes-postgres;Port=5432;Database=quotesdb;Username=quotesuser;Password=quotespass
+            - name: Jwt__Issuer
+              value: QuotesAggregator
+            - name: Jwt__Audience
+              value: QuotesAggregatorClients
+            - name: Jwt__Key
+              value: "JpWX4hRQ9EP8XGE25LJx3pQtqMHYTUw2V2eERuD8Hy9ZAWHJUREh7wYJUs1AVYot+QdxnpkFGYXi4WPMWOmcCg==JpWX4hRQ9EP8XGE25LJx3pQtqMHYTUw2V2eERuD8Hy9ZAWHJUREh7wYJUs1AVYot+QdxnpkFGYXi4WPMWOmcCg=="
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10

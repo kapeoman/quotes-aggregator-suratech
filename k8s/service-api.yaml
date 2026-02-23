@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotes-api
+  labels:
+    app: quotes-api
+spec:
+  type: NodePort
+  selector:
+    app: quotes-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5033
+      nodePort: 30080

@@ -1,0 +1,104 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Quotes.Api",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/v1/Auth/token": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/quotes": {
+      "post": {
+        "tags": [
+          "Quotes"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuoteRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuoteRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateQuoteRequest": {
+        "required": [
+          "currency",
+          "documentId"
+        ],
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "amount": {
+            "maximum": 999999999,
+            "minimum": 0,01,
+            "type": "number",
+            "format": "double"
+          },
+          "currency": {
+            "maxLength": 3,
+            "minLength": 3,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "description": "Enter: Bearer {your JWT token}",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "Bearer": [ ]
+    }
+  ]
+}

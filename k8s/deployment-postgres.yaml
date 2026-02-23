@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotes-postgres
+  labels:
+    app: quotes-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quotes-postgres
+  template:
+    metadata:
+      labels:
+        app: quotes-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: pg
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: quotesdb
+            - name: POSTGRES_USER
+              value: quotesuser
+            - name: POSTGRES_PASSWORD
+              value: quotespass
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U quotesuser -d quotesdb"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U quotesuser -d quotesdb"]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: pgdata
+          emptyDir: {}
